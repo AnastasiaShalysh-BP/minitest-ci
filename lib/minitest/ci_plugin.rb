@@ -167,7 +167,7 @@ module Minitest
             bt    = Minitest::filter_backtrace failure.backtrace
 
             xml << "    <%s type='%s' message=%s>%s" %
-              [label, escape(klass), escape(msg).inspect.gsub('\n', "&#13;&#10;"), escape(bt.join("\n"))]
+              [label, escape(klass), escape(msg).inspect.gsub('\n', "&#13;&#10;"), msg + '\n' + escape(bt.join("\n"))]
             xml << "    </%s>" % label
           end
           xml << "  </testcase>"
