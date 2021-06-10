@@ -97,8 +97,10 @@ module Minitest
         xml = []
         File.open("specs.xml", "w") do |f|
           xml << '<?xml version="1.0" encoding="UTF-8"?>'
-          xml << '<testsuite name="rspec" tests="1" skipped="0" failures="0" errors="0" time="402.552176" timestamp="2021-06-07T17:02:27-05:00" hostname="aaaaa">'
-          xml << '<testcase classname="spec.services.collections.whatever" name="Collections::Whatever.export some description of the file" file="./spec/services/whatever/file.rb" time="4.381428"></testcase>'
+          xml << summary_generate_results_aws(results)
+          # xml << '<testsuite tests="1" skipped="0" failures="0" errors="0" time="402.552176">'
+          # xml << '<testcase classname="spec.services.collections.whatever" name="Collections::Whatever.export some description of the file" time="4.381428"></testcase>'
+          xml += generate_testcase_results_aws(results)
           xml << '</testsuite>'
           f.puts xml
         end
@@ -115,6 +117,66 @@ module Minitest
     def escape o
       CGI.escapeHTML(o.to_s)
     end
+
+    def summary_generate_results_aws(results)
+      total_time = assertions = errors = failures = skips = tests_count = 0
+      timestamp = Time.now.iso8601
+
+      results.each do |name, tests|
+        tests.each do |test|
+          tests_count += 1
+          total_time += test.time
+          assertions += test.assertions
+
+          case test.failure
+          when Skip
+            skips += 1
+          when UnexpectedError
+            errors += 1
+          when Assertion
+            failures += 1
+          end
+        end
+      end
+
+      "<testsuite time='%6f' skipped='%d' failures='%d' errors='%d' assertions='%d' tests='%d' timestamp=%p>" %
+        [total_time, skips, failures, errors, assertions, tests_count, timestamp]
+    end
+
+    def generate_testcase_results_aws(results)
+      xml = []
+      base = working_dir + '/'
+      results.each do |name, tests|
+        tests.each do |test|
+          location = if test.respond_to? :source_location then
+                       test.source_location
+                     else
+                       test.method(test.name).source_location
+                     end[0].gsub(base, '')
+          xml << "  <testcase time='%6f' classname=%p name=%p assertions='%s'>" %
+            [test.time, escape(location), escape(test.name), test.assertions]
+          if failure = test.failure
+            label = failure.result_label.downcase
+
+            if failure.is_a?(UnexpectedError)
+              failure = failure.error
+            end
+
+            klass = failure.class
+            msg   = failure.message
+            bt    = Minitest::filter_backtrace failure.backtrace
+
+            xml << "    <%s type='%s' message=%s>%s" %
+              [label, escape(klass), msg.inspect, msg.inspect + "\n" + bt.join("\n")]
+            xml << "    </%s>" % label
+          end
+          xml << "  </testcase>"
+        end
+      end
+
+      xml
+    end
+
 
     def generate_results name, results
       total_time = assertions = errors = failures = skips = 0
