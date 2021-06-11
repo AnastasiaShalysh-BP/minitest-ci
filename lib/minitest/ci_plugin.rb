@@ -97,18 +97,11 @@ module Minitest
         xml = []
         File.open("specs.xml", "w") do |f|
           xml << '<?xml version="1.0" encoding="UTF-8"?>'
-          xml << summary_generate_results_aws(results)
-          # xml << '<testsuite tests="1" skipped="0" failures="0" errors="0" time="402.552176">'
-          # xml << '<testcase classname="spec.services.collections.whatever" name="Collections::Whatever.export some description of the file" time="4.381428"></testcase>'
+          xml << generate_testsuite_results_aws(results)
           xml += generate_testcase_results_aws(results)
           xml << '</testsuite>'
           f.puts xml
         end
-        # results.each do |name, result|
-        #   File.open(report_name(name), "w") do |f|
-        #     f.puts( generate_results(name, result) ) ['a','b','c']
-        #   end
-        # end
       end
     end
 
@@ -118,7 +111,7 @@ module Minitest
       CGI.escapeHTML(o.to_s)
     end
 
-    def summary_generate_results_aws(results)
+    def generate_testsuite_results_aws(results)
       total_time = assertions = errors = failures = skips = tests_count = 0
       timestamp = Time.now.iso8601
 
@@ -167,7 +160,7 @@ module Minitest
             bt    = Minitest::filter_backtrace failure.backtrace
 
             xml << "    <%s type='%s' message=%s>%s" %
-              [label, escape(klass), escape(msg).inspect.gsub('\n', "&#13;&#10;"), msg + '\n' + escape(bt.join("\n"))]
+              [label, escape(klass), escape(msg).inspect.gsub('\n', "&#13;&#10;"), msg + "\n" + escape(bt.join("\n"))]
             xml << "    </%s>" % label
           end
           xml << "  </testcase>"
